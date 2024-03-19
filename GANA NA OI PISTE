@@ -60,7 +60,7 @@ void loop() {
     if (pressCount >= unlockPressCount || isLongPress) {
       // Decode Morse code for letter 'P'
       int i = 0;
-      while (i < sizeof(password) / sizeof(password[0])) {
+      while (i < sizeof(dotDuration, dashDuration, dashDuration, dashDuration, interCharacterDelay) / sizeof(dotDuration, dashDuration, dashDuration, dashDuration, interCharacterDelay) {
         int duration = 0;
         // Wait for dot or dash duration
         while (digitalRead(buttonPin) == LOW) {
