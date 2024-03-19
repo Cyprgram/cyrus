@@ -1,0 +1,95 @@
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <thread>
+#include <wiringPi.h>
+
+// Pin Definitions
+#define BUTTON_PIN 2
+#define LED_PIN 3
+
+// Morse Code Definitions
+#define DOT_LENGTH_MS 200
+#define DASH_LENGTH_MS 3 * DOT_LENGTH_MS
+#define INTER_ELEMENT_GAP_MS DOT_LENGTH_MS
+#define INTER_CHARACTER_GAP_MS 3 * DOT_LENGTH_MS
+#define INTER_WORD_GAP_MS 7 * DOT_LENGTH_MS
+
+// Morse Code Patterns
+const std::vector<int> PASSWORD = {1, 1, 1, 0, 0, 0, 1, 1};
+
+// Function to check Morse code input against the password
+bool checkPassword(const std::vector<int>& input) {
+    if (input.size() != PASSWORD.size())
+        return false;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i] != PASSWORD[i])
+            return false;
+    }
+
+    return true;
+}
+
+// Function to read Morse code input from button
+std::vector<int> readMorseCode() {
+    std::vector<int> input;
+
+    auto start_time = std::chrono::steady_clock::now();
+    while (true) {
+        // Read the button state
+        int button_state = digitalRead(BUTTON_PIN);
+
+        // Check if button is pressed
+        if (button_state == HIGH) {
+            auto end_time = std::chrono::steady_clock::now();
+            auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
+            if (elapsed_time >= DASH_LENGTH_MS) {
+                input.push_back(1); // Dash
+            } else {
+                input.push_back(0); // Dot
+            }
+
+            // Wait for inter-element gap
+            std::this_thread::sleep_for(std::chrono::milliseconds(INTER_ELEMENT_GAP_MS));
+
+            start_time = std::chrono::steady_clock::now();
+        }
+
+        // Check if button is released to indicate end of character
+        if (button_state == LOW && !input.empty()) {
+            // Wait for inter-character gap
+            std::this_thread::sleep_for(std::chrono::milliseconds(INTER_CHARACTER_GAP_MS));
+
+            break;
+        }
+    }
+
+    return input;
+}
+
+// Function to control LED based on unlock status
+void controlLED(bool unlocked) {
+    digitalWrite(LED_PIN, unlocked ? HIGH : LOW);
+}
+
+int main() {
+    // Initialize wiringPi library
+    wiringPiSetup();
+    
+    // Set pin modes
+    pinMode(BUTTON_PIN, INPUT);
+    pinMode(LED_PIN, OUTPUT);
+
+    while (true) {
+        std::vector<int> input = readMorseCode();
+        bool unlocked = checkPassword(input);
+        controlLED(unlocked);
+
+        // Wait for inter-word gap
+        std::this_thread::sleep_for(std::chrono::milliseconds(INTER_WORD_GAP_MS));
+    }
+
+    return 0;
+}
