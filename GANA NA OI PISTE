@@ -1,0 +1,120 @@
+// Define pin numbers
+const int buttonPin = 46; // Pin connected to pushbutton
+const int ledPin = 42;   // Pin connected to LED
+const int relayPin = 44;  // Pin connected to relay module
+
+const int dotDuration = 1000;   // Duration of a dot in milliseconds
+const int dashDuration = 2000;  // Duration of a dash in milliseconds
+const int interElementDelay = 250;  // Delay between dots and dashes in a character
+const int interCharacterDelay = 750; // Delay between characters in Morse code
+const int interWordDelay = 1500;    // Delay between words
+const int unlockPressCount = 3; // Number of presses to unlock the solenoid
+const int unlockTimeWindow = 5000; // Time window (in milliseconds) to count the number of presses
+const int longPressDuration = 2000; // Duration of a long press in milliseconds
+
+// Morse code for letter 'P'
+const int password[] = {dotDuration, dashDuration, dashDuration, dashDuration, interCharacterDelay};
+
+bool unlock = false;
+bool isLongPress = false;
+unsigned long lastPressTime = 0;
+int pressCount = 0;
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+  pinMode(relayPin, OUTPUT);
+}
+
+void loop() {
+  // Wait for the button press
+  if (digitalRead(buttonPin) == LOW) {
+    unsigned long currentTime = millis();
+    unsigned long pressDuration = currentTime - lastPressTime;
+
+    // Check if it's within the time window
+    if (currentTime - lastPressTime > unlockTimeWindow) {
+      // Reset if the time window has passed
+      pressCount = 0;
+    }
+
+    // Increment the press count
+    pressCount++;
+    lastPressTime = currentTime;
+
+    // Blink the LED to indicate the press if it's a short press
+    if (pressDuration < longPressDuration) {
+      digitalWrite(ledPin, HIGH); // Turn on the LED
+      delay(100); // Blink duration
+      digitalWrite(ledPin, LOW); // Turn off the LED
+    }
+
+    // Check if the button is held for a long duration
+    if (pressDuration >= longPressDuration) {
+      isLongPress = true;
+    } else {
+      isLongPress = false;
+    }
+
+    // Check if the required number of presses is reached or a long press is detected
+    if (pressCount >= unlockPressCount || isLongPress) {
+      // Decode Morse code for letter 'P'
+      int i = 0;
+      while (i < sizeof(password) / sizeof(password[0])) {
+        int duration = 0;
+        // Wait for dot or dash duration
+        while (digitalRead(buttonPin) == LOW) {
+          duration += 10;
+          delay(10);
+          if (duration >= 3000) {
+            // Button held for 3 seconds, consider as dash
+            duration = dashDuration;
+            break;
+          }
+        }
+
+        // Check if the duration matches dot or dash
+        if (duration <= (dotDuration + (dashDuration - dotDuration) / 2)) {
+          // Dot
+          duration = dotDuration;
+          digitalWrite(ledPin, HIGH); // Turn on the LED for dot
+          delay(100); // Blink duration for dot
+          digitalWrite(ledPin, LOW); // Turn off the LED after dot
+        } else {
+          // Dash
+          duration = dashDuration;
+          digitalWrite(ledPin, HIGH); // Turn on the LED for dash
+          delay(duration); // LED stays on for dash duration
+          digitalWrite(ledPin, LOW); // Turn off the LED after dash
+        }
+
+        // Check if the input matches the password
+        if (duration != password[i]) {
+          // Incorrect input, reset
+          unlock = false;
+          break;
+        }
+
+        i++;
+      }
+
+      // Check if the password was correctly entered
+      if (i == sizeof(password) / sizeof(password[0])) {
+        unlock = true;
+      }
+
+      // Perform actions based on unlock status
+      if (unlock) {
+        // Unlock the lock
+        digitalWrite(relayPin, HIGH); // Activate the relay module to unlock the solenoid lock
+        delay(5000); // Allow some time to keep the lock open
+        digitalWrite(relayPin, LOW); // Deactivate the relay module
+        pressCount = 0; // Reset press count
+        unlock = false; // Reset unlock status
+      }
+    }
+
+    // Delay to debounce the button
+    delay(50);
+  }
+}
