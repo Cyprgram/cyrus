@@ -1,0 +1,69 @@
+const int BUTTON_PIN = 44;
+const int RELAY_PIN = 46;
+const int LED_LOCKED_PIN = 40;
+const int LED_UNLOCKED_PIN = 42;
+const int SPEAKER_PIN = 48;
+
+// Morse Code for letter 'A'
+const int morseA[] = {1, 3}; // dot, dash, space
+
+int morseIndex = 0;
+bool isPressed = false;
+
+void setup() {
+  pinMode(BUTTON_PIN, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LED_LOCKED_PIN, OUTPUT);
+  pinMode(LED_UNLOCKED_PIN, OUTPUT);
+  pinMode(SPEAKER_PIN, OUTPUT);
+
+  digitalWrite(LED_LOCKED_PIN, HIGH); // Initially, LED_LOCKED_PIN is HIGH
+  digitalWrite(LED_UNLOCKED_PIN, LOW); // Initially, LED_UNLOCKED_PIN is LOW
+}
+
+void loop() {
+  if (digitalRead(BUTTON_PIN) == HIGH) {
+    if (!isPressed) {
+      isPressed = true;
+      morseIndex = 0;
+    }
+    else {
+      // Implement Morse Code functionality here
+      if (morseIndex < sizeof(morseA) / sizeof(morseA[0])) {
+        int unit = morseA[morseIndex];
+        if (unit == 1) {
+          digitalWrite(LED_LOCKED_PIN, LOW);
+          digitalWrite(LED_UNLOCKED_PIN, HIGH);
+          digitalWrite(SPEAKER_PIN, HIGH);
+          delay(300); // dot duration
+        }
+        else if (unit == 3) {
+          digitalWrite(LED_LOCKED_PIN, HIGH);
+          digitalWrite(LED_UNLOCKED_PIN, LOW);
+          digitalWrite(SPEAKER_PIN, LOW);
+          delay(900); // dash duration
+        }
+        else { // space between dots and dashes
+          digitalWrite(LED_LOCKED_PIN, HIGH);
+          digitalWrite(LED_UNLOCKED_PIN, LOW);
+          digitalWrite(SPEAKER_PIN, LOW);
+          delay(300); // space duration
+        }
+        morseIndex++;
+      }
+      else {
+        // If Morse code for 'A' is successfully entered
+        digitalWrite(LED_LOCKED_PIN, LOW);
+        digitalWrite(LED_UNLOCKED_PIN, HIGH);
+        digitalWrite(RELAY_PIN, HIGH); // Unlock mechanism
+        delay(1000); // Lock for 1 second
+        digitalWrite(RELAY_PIN, LOW); // Lock mechanism
+        digitalWrite(LED_LOCKED_PIN, HIGH);
+        digitalWrite(LED_UNLOCKED_PIN, LOW);
+      }
+    }
+  }
+  else {
+    isPressed = false;
+  }
+}
